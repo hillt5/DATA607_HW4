@@ -1,0 +1,89 @@
+---
+title: "Assignment 4 - Tidying and Transforming Data"
+author: "Thomas Hill"
+date: "3/1/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# (1) Original Table 
+
+I'll start by creating the table from the assignment as a dataframe.
+
+```{r df-build}
+airline <- c('ALASKA', 'ALASKA', 'AM WEST', 'AM WEST')
+arrival_status <- c('on time', 'delayed', 'on time', 'delayed')
+los_angeles <- c(497, 62, 694, 117)
+phoenix <- c(221, 12, 4840, 415)
+san_diego <- c(212, 20, 383, 65)
+san_fran <- c(503, 102, 320, 129)
+seattle <- c(1841, 305, 201, 61)
+arrival_delays_df <- data.frame(airline, arrival_status, los_angeles, phoenix, san_diego, san_fran, seattle)
+head(arrival_delays_df)
+```
+
+# Convert to .csv
+
+The following line of code converts to .csv.
+
+
+```{r df-to-csv}
+
+write.csv(arrival_delays_df, file = "C:/Users/Thomas/Documents/GitHub/DATA607_HW4/DATA607_HW4.csv", row.names = FALSE)
+
+```
+
+
+# (2) Import .csv format... 
+
+```{r import-csv}
+
+read.csv("C:/Users/Thomas/Documents/GitHub/DATA607_HW4/DATA607_HW4.csv")
+
+```
+
+# ...then transform data to long format
+
+As mentioned in the instructions, the data is in 'wide' format currently. I'll use tidyr to make this table in a 'long' format.
+
+```{r csv-transform-long}
+library(tidyr)
+library(dplyr)
+
+arrival_delays_long <- arrival_delays_df %>% 
+  gather(airport, n, los_angeles:seattle) %>%
+  arrange(airline)
+arrival_delays_long
+
+```
+
+# Comparing Delays between the Two Airlines 
+
+Now that all of the information is in a long format, it will be easier to use summarize and mutate to find the percent of flights that were delayed for each variable.  I'll start by finding the total flights at each airport and then calculating the percent that were delayed. Finally, I'll arrange the newly calculated information by airport and airline to facilitate comparison between their percent delays.
+
+```{r totals-and-pct-delay}
+flights_pct_delay <- arrival_delays_long %>%
+  group_by(airport, airline) %>%
+  mutate(total_flights = sum(n)) %>%
+  ungroup() %>%
+  filter(arrival_status == "delayed") %>%
+  mutate(pct_airline_delay = n / total_flights) %>%
+  arrange(airport, airline)
+flights_pct_delay
+```
+
+# Conclusions 
+
+From the new table, a few observations jump out. The total flights for AM WEST are highest in Phoenix, while ALASKA likely has Seattle as a hub. Comparing each airline, delay times vary between 5 and 30%.  Overall, it also appears that ALASKA has lower rates of delay at each airport. I can now use the spread function to show the airline as elements in a wide dataframe.
+
+```{r pct-wide}
+flights_pct_delay_wide <- flights_pct_delay %>%
+  select(airline, airport, pct_airline_delay) %>%
+  spread(airport, pct_airline_delay) %>%
+  group_by(airline)
+flights_pct_delay_wide
+```
+
